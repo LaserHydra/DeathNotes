@@ -1,0 +1,142 @@
+﻿**Death Notes** allows you to broadcast deaths of different variety to chat, including information like the weapon used and which bodypart was hit.
+
+## Localization
+
+```json
+{
+  "Distance Unit Singular": "meter",
+  "Distance Unit Plural": "meters"
+}
+```
+
+## Configuration
+
+The configurable messages consist of these message blocks:
+
+```json
+{
+    "KillerType": "Player",
+    "VictimType": "Player",
+    "DamageType": "Bullet",
+    "Messages": [
+        "{killer} shot {victim} using their {weapon} over a distance of {distance}."
+    ]
+}
+```
+
+These message blocks can be edited, removed or added to your liking.
+The plugin dynamically decides which message should be used in a certain situation.
+Therefor you have to specify the `KillerType`, `VictimType` and `DamageType` describing the situation you want your message to appear in.
+
+The message example above is used when a player kills another player doing bullet damage.
+You can use the default configuration as an example on what it looks like when having multiple message blocks, doing this it is important you don't forget comma.
+
+These are the available killer/victim types:
+```yaml
+- Helicopter
+- Bradley
+- Animal
+- Murderer
+- Scientist
+- Player
+- Trap
+- Turret
+- Barricade
+- ExternalWall
+- HeatSource
+- Fire
+- Lock
+```
+
+These are the available damage types:
+```yaml
+- Generic 
+- Hunger
+- Thirst
+- Cold
+- Drowned
+- Heat
+- Bleeding
+- Poison
+- Suicide
+- Bullet
+- Slash
+- Blunt
+- Fall
+- Radiation
+- Bite
+- Stab
+- Explosion
+- RadiationExposure
+- ColdExposure
+- Decay
+- ElectricShock
+- Arrow
+```
+
+Below you can see contents of the default configuration file.
+
+```json
+{
+  "Translations": {
+    "Death Messages": [
+      {
+        "KillerType": "Player",
+        "VictimType": "Player",
+        "DamageType": "Bullet",
+        "Messages": [
+          "{killer} shot {victim} using their {weapon} over a distance of {distance}."
+        ]
+      },
+      {
+        "KillerType": "Player",
+        "VictimType": "Player",
+        "DamageType": "Arrow",
+        "Messages": [
+          "{victim} was shot by {killer} with their {weapon} over a distance of {distance}."
+        ]
+      }
+      // More messages here
+    ],
+    "Names": {
+      "Boar": "Boar",
+      "Bear": "Bear",
+      "Scientist": "Scientist"
+    },
+    "Bodyparts": {
+      "Chest": "Chest",
+      "Head": "Head",
+      "Leg": "Leg"
+    },
+    "Weapons": {
+      "M249": "M249",
+      "Spas-12 Shotgun": "Spas-12 Shotgun",
+      "LR-300 Assault Rifle": "LR-300 Assault Rifle"
+    }
+  },
+  "Variable Formats": {
+    "attachments": " ({value})"
+  },
+  "Variable Colors": {
+    "killer": "#C4FF00",
+    "victim": "#C4FF00",
+    "weapon": "#C4FF00",
+    "attachments": "#C4FF00",
+    "distance": "#C4FF00",
+    "owner": "#C4FF00"
+  },
+  "Chat Format": "<color=#838383>[<color=#80D000>DeathNotes</color>] {message}</color>",
+  "Chat Icon (SteamID)": "76561198077847390",
+  "Show Kills in Console": true,
+  "Show Kills in Chat": true,
+  "Use Metric Distance": false
+}
+```
+
+## For Developers
+
+### Hooks
+
+```csharp
+void OnDeathNotice(Dictionary<string, object> data, string message)
+```
