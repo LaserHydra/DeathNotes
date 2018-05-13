@@ -11,6 +11,8 @@
 
 ## Configuration
 
+### Messages
+
 The configurable messages consist of these message blocks:
 
 ```json
@@ -31,7 +33,8 @@ Therefor you have to specify the `KillerType`, `VictimType` and `DamageType` des
 The message example above is used when a player kills another player doing bullet damage.
 You can use the default configuration as an example on what it looks like when having multiple message blocks, doing this it is important you don't forget comma.
 
-These are the available killer/victim types:
+### Available Killer/Victim Types
+
 ```yaml
 - Helicopter
 - Bradley
@@ -48,7 +51,9 @@ These are the available killer/victim types:
 - Lock
 ```
 
-These are the available damage types:
+
+### Available Damage Types
+
 ```yaml
 - Generic 
 - Hunger
@@ -74,7 +79,7 @@ These are the available damage types:
 - Arrow
 ```
 
-Below you can see contents of the default configuration file.
+### Default Configuration
 
 ```json
 {
