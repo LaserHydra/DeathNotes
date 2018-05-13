@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-	[Info("Death Notes", "LaserHydra", "6.0.0")]
+	[Info("Death Notes", "LaserHydra", "6.0.1")]
 	public class DeathNotes : RustPlugin
 	{
 		#region Fields
@@ -340,10 +340,12 @@ namespace Oxide.Plugins
 					return "Helicopter";
 
 				case CombatEntityType.Murderer:
-					return "Murderer";
+					var murdererName = entity.ToPlayer().displayName;
+					return string.IsNullOrEmpty(murdererName) ? "Murderer" : murdererName;
 
 				case CombatEntityType.Scientist:
-					return "Scientist";
+					var scientistName = entity.ToPlayer().displayName;
+					return string.IsNullOrEmpty(scientistName) ? "Scientist" : scientistName;
 
 				case CombatEntityType.Bradley:
 					return "Bradley APC";
