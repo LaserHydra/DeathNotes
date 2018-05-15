@@ -49,6 +49,7 @@ You can use the default configuration as an example on what it looks like when h
 - HeatSource
 - Fire
 - Lock
+- ScientistSentry
 ```
 
 
