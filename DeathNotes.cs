@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-	[Info("Death Notes", "LaserHydra", "6.0.1")]
+	[Info("Death Notes", "LaserHydra", "6.0.2")]
 	public class DeathNotes : RustPlugin
 	{
 		#region Fields
@@ -158,7 +158,19 @@ namespace Oxide.Plugins
 			Interface.Call("OnDeathNotice", data.ToDictionary(), message);
 
 			if (_configuration.ShowInChat)
-				Server.Broadcast(_configuration.ChatFormat.Replace("{message}", message), null, ulong.Parse(_configuration.ChatIcon));
+			{
+				foreach (var player in BasePlayer.activePlayerList)
+				{
+					if (_configuration.MessageRadius != -1 && player.Distance(data.VictimEntity) < _configuration.MessageRadius)
+						continue;
+
+					Player.Reply(
+						player,
+						_configuration.ChatFormat.Replace("{message}", message), 
+						ulong.Parse(_configuration.ChatIcon)
+					);
+				}
+			}
 
 			if (_configuration.ShowInConsole)
 				Puts(StripRichText(message));
@@ -288,9 +300,6 @@ namespace Oxide.Plugins
 			if (_combatEntityTypes.Contents != null && _combatEntityTypes.Contents.ContainsKey(entity.GetType().Name))
 				return _combatEntityTypes.Contents[entity.GetType().Name];
 
-			if (entity is Scientist)
-				return CombatEntityType.Scientist;
-
 			if (entity is BaseOven)
 				return CombatEntityType.HeatSource;
 
@@ -340,15 +349,18 @@ namespace Oxide.Plugins
 					return "Helicopter";
 
 				case CombatEntityType.Murderer:
-					var murdererName = entity.ToPlayer().displayName;
+					var murdererName = entity.ToPlayer()?.displayName;
 					return string.IsNullOrEmpty(murdererName) ? "Murderer" : murdererName;
 
 				case CombatEntityType.Scientist:
-					var scientistName = entity.ToPlayer().displayName;
+					var scientistName = entity.ToPlayer()?.displayName;
 					return string.IsNullOrEmpty(scientistName) ? "Scientist" : scientistName;
 
 				case CombatEntityType.Bradley:
 					return "Bradley APC";
+
+				case CombatEntityType.ScientistSentry:
+					return "Scientist Sentry";
 
 				case CombatEntityType.Fire:
 					return entity.creatorEntity?.ToPlayer()?.displayName ?? "Fire";
@@ -378,8 +390,9 @@ namespace Oxide.Plugins
 			HeatSource = 10,
 			Fire = 11,
 			Lock = 12,
-			Other = 13,
-			None = 14
+			ScientistSentry = 13,
+			Other = 14,
+			None = 15
 		}
 
 		#endregion
@@ -537,7 +550,7 @@ namespace Oxide.Plugins
 
 		#region Helper
 
-		private void LogDebug(string text)
+		private static void LogDebug(string text)
 		{
 			if (BasePlayer.activePlayerList.Count >= 1)
 			{
@@ -592,6 +605,9 @@ namespace Oxide.Plugins
 
 		private static string HumanizePascalCase(string text)
 		{
+			if (string.IsNullOrEmpty(text))
+				return string.Empty;
+
 			var sb = new StringBuilder();
 
 			foreach (char c in text)
@@ -607,6 +623,9 @@ namespace Oxide.Plugins
 
 		private string StripRichText(string text)
 		{
+			if (string.IsNullOrEmpty(text))
+				return string.Empty;
+
 			text = _colorTagRegex.Replace(text, string.Empty);
 			text = _sizeTagRegex.Replace(text, string.Empty);
 
@@ -677,6 +696,9 @@ namespace Oxide.Plugins
 
 			[JsonProperty("Show Kills in Chat")]
 			public bool ShowInChat = true;
+
+			[JsonProperty("Message Broadcast Radius (in meters)")]
+			public int MessageRadius = -1;
 
 			[JsonProperty("Use Metric Distance")]
 			public bool UseMetricDistance = true;
