@@ -27,6 +27,7 @@ The configurable messages consist of these message blocks:
 ```
 
 These message blocks can be edited, removed or added to your liking.
+To disable a message, please just remove the respective message block entirely.
 The plugin dynamically decides which message should be used in a certain situation.
 Therefor you have to specify the `KillerType`, `VictimType` and `DamageType` describing the situation you want your message to appear in.
 
@@ -78,6 +79,32 @@ You can use the default configuration as an example on what it looks like when h
 - Decay
 - ElectricShock
 - Arrow
+```
+
+### Available Variable Placeholders
+
+Always available:
+```yaml
+- {killer} : Name of the killer
+- {victim} : Name of the victim
+```
+
+Available for deaths involving a killer:
+```yaml
+- {bodypart} : Bodypart which was hit
+- {distance} : Distance between killer and victim
+```
+
+Available for deaths involving a Lock or Turret as the killer:
+```yaml
+- {owner} : Name of the lock/turret owner
+```
+
+Available for deaths involving a Player as the killer:
+```yaml
+- {hp} : Remaining HP of the killer
+- {weapon} : Weapon used by the killer
+- {attachments} : Attachments used on the killers weapon
 ```
 
 ### Default Configuration

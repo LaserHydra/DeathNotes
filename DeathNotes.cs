@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-	[Info("Death Notes", "LaserHydra", "6.0.2")]
+	[Info("Death Notes", "LaserHydra", "6.0.3")]
 	public class DeathNotes : RustPlugin
 	{
 		#region Fields
@@ -161,7 +161,7 @@ namespace Oxide.Plugins
 			{
 				foreach (var player in BasePlayer.activePlayerList)
 				{
-					if (_configuration.MessageRadius != -1 && player.Distance(data.VictimEntity) < _configuration.MessageRadius)
+					if (_configuration.MessageRadius != -1 && player.Distance(data.VictimEntity) > _configuration.MessageRadius)
 						continue;
 
 					Player.Reply(
@@ -216,7 +216,7 @@ namespace Oxide.Plugins
 			{
 				var match = _configuration.Translations.Messages.Find(m => matchingStage.Invoke(m, data));
 
-				if (match != null && match.Messages.Length != 0)
+				if (match != null)
 					return match.Messages.GetRandom((uint) DateTime.UtcNow.Millisecond);
 			}
 
@@ -231,14 +231,15 @@ namespace Oxide.Plugins
 			var replacements = new Dictionary<string, string>
 			{
 				["killer"] = GetCustomizedEntityName(data.KillerEntity, data.KillerEntityType),
-				["victim"] = GetCustomizedEntityName(data.VictimEntity, data.VictimEntityType),
-				["bodypart"] = GetCustomizedBodypartName(data.HitInfo)
+				["victim"] = GetCustomizedEntityName(data.VictimEntity, data.VictimEntityType)
 			};
 
 			if (data.KillerEntity != null)
 			{
 				var distance = data.KillerEntity.Distance(data.VictimEntity);
 				replacements.Add("distance", GetDistance(distance, _configuration.UseMetricDistance));
+
+				replacements.Add("bodypart", GetCustomizedBodypartName(data.HitInfo));
 
 				if (data.KillerEntityType == CombatEntityType.Turret)
 				{
@@ -252,12 +253,12 @@ namespace Oxide.Plugins
 						covalence.Players.FindPlayerById(data.KillerEntity.OwnerID.ToString())?.Name ?? "unknown owner"
 					); // TODO: Work on the potential unknown owner case
 				}
-			}
-
-			if (data.KillerEntityType == CombatEntityType.Player)
-			{
-				replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
-				replacements.Add("attachments", string.Join(", ", GetWeaponAttachments(data.HitInfo).ToArray()));
+				else if (data.KillerEntityType == CombatEntityType.Player)
+				{
+					replacements.Add("hp", data.KillerEntity.Health().ToString("#0.#"));
+					replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
+					replacements.Add("attachments", string.Join(", ", GetWeaponAttachments(data.HitInfo).ToArray()));
+				}
 			}
 			
 			message = InsertPlaceholderValues(message, replacements);
