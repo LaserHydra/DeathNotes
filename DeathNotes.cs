@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-	[Info("Death Notes", "LaserHydra", "6.0.3")]
+	[Info("Death Notes", "LaserHydra", "6.0.4")]
 	public class DeathNotes : RustPlugin
 	{
 		#region Fields
@@ -124,6 +124,9 @@ namespace Oxide.Plugins
 				HitInfo = hitInfo
 			};
 
+			// Handle inconsistencies/exceptions
+			HandleExceptions(ref data);
+
 #if DEBUG
 			LogDebug("[DEATHNOTES DEBUG]");
 			LogDebug($"VictimEntity: {data.VictimEntity?.GetType().Name ?? "NULL"} / {data.VictimEntity?.name ?? "NULL"}");
@@ -132,17 +135,15 @@ namespace Oxide.Plugins
 			LogDebug($"KillerEntityType: {data.KillerEntityType}");
 			LogDebug($"DamageType: {data.DamageType}");
 			LogDebug($"Bodypart: {GetCustomizedBodypartName(data.HitInfo)}");
+			LogDebug($"Weapon: {hitInfo?.WeaponPrefab?.ShortPrefabName ?? "NULL"}");
 #endif
-
-			// Handle inconsistencies/exceptions
-			HandleExceptions(ref data);
 
 			// Ignore deaths of other entities
 			if (data.KillerEntityType == CombatEntityType.Other || data.VictimEntityType == CombatEntityType.Other)
 				return;
 
-			// Ignore deaths which don't involve players
-			if (data.VictimEntityType != CombatEntityType.Player && data.KillerEntityType != CombatEntityType.Player)
+			// Ignore deaths which don't involve players or the helicopter which usually does not track a player as killer
+			if (data.VictimEntityType != CombatEntityType.Player && data.KillerEntityType != CombatEntityType.Player && data.VictimEntityType != CombatEntityType.Helicopter)
 				return;
 
 			// Populate the variables in the message
@@ -217,7 +218,7 @@ namespace Oxide.Plugins
 				var match = _configuration.Translations.Messages.Find(m => matchingStage.Invoke(m, data));
 
 				if (match != null)
-					return match.Messages.GetRandom((uint) DateTime.UtcNow.Millisecond);
+					return match.Messages.GetRandom((uint)DateTime.UtcNow.Millisecond);
 			}
 
 			return null;
@@ -369,7 +370,7 @@ namespace Oxide.Plugins
 
 			if (entity == null)
 				return null;
-
+			
 			if (_enemyPrefabs.Contents.ContainsKey(entity.ShortPrefabName))
 				return _enemyPrefabs.Contents[entity.ShortPrefabName];
 
@@ -431,7 +432,7 @@ namespace Oxide.Plugins
 
 			// Workaround for deaths caused by flamethrower or rocket fire 
 			var flame = data.KillerEntity?.gameObject?.GetComponent<Flame>();
-			if (flame != null)
+			if (flame != null && flame.Initiator != null)
 			{
 				data.KillerEntity = flame.Initiator;
 				data.KillerEntityType = CombatEntityType.Player;
@@ -442,6 +443,12 @@ namespace Oxide.Plugins
 			if (data.HitInfo?.WeaponPrefab?.ShortPrefabName == "maincannonshell")
 			{
 				data.KillerEntityType = CombatEntityType.Bradley;
+				return;
+			}
+
+			if (data.HitInfo?.WeaponPrefab?.ShortPrefabName?.StartsWith("rocket_heli") ?? false)
+			{
+				data.KillerEntityType = CombatEntityType.Helicopter;
 				return;
 			}
 		}
