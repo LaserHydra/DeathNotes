@@ -85,12 +85,12 @@ You can use the default configuration as an example on what it looks like when h
 
 Always available:
 ```yaml
-- {killer} : Name of the killer
 - {victim} : Name of the victim
 ```
 
 Available for deaths involving a killer:
 ```yaml
+- {killer} : Name of the killer
 - {bodypart} : Bodypart which was hit
 - {distance} : Distance between killer and victim
 ```

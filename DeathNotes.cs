@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-	[Info("Death Notes", "LaserHydra", "6.0.4")]
+	[Info("Death Notes", "LaserHydra", "6.0.5")]
 	public class DeathNotes : RustPlugin
 	{
 		#region Fields
@@ -231,34 +231,28 @@ namespace Oxide.Plugins
 
 			var replacements = new Dictionary<string, string>
 			{
-				["killer"] = GetCustomizedEntityName(data.KillerEntity, data.KillerEntityType),
 				["victim"] = GetCustomizedEntityName(data.VictimEntity, data.VictimEntityType)
 			};
 
 			if (data.KillerEntity != null)
 			{
+				replacements.Add("killer", GetCustomizedEntityName(data.KillerEntity, data.KillerEntityType));
+				replacements.Add("bodypart", GetCustomizedBodypartName(data.HitInfo));
+
 				var distance = data.KillerEntity.Distance(data.VictimEntity);
 				replacements.Add("distance", GetDistance(distance, _configuration.UseMetricDistance));
 
-				replacements.Add("bodypart", GetCustomizedBodypartName(data.HitInfo));
-
-				if (data.KillerEntityType == CombatEntityType.Turret)
-				{
-					replacements.Add("owner",
-						covalence.Players.FindPlayerById(data.KillerEntity.OwnerID.ToString())?.Name ?? "unknown owner"
-					); // TODO: Work on the potential unknown owner case
-				}
-				else if (data.KillerEntityType == CombatEntityType.Lock)
-				{
-					replacements.Add("owner",
-						covalence.Players.FindPlayerById(data.KillerEntity.OwnerID.ToString())?.Name ?? "unknown owner"
-					); // TODO: Work on the potential unknown owner case
-				}
-				else if (data.KillerEntityType == CombatEntityType.Player)
+				if (data.KillerEntityType == CombatEntityType.Player)
 				{
 					replacements.Add("hp", data.KillerEntity.Health().ToString("#0.#"));
 					replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
-					replacements.Add("attachments", string.Join(", ", GetWeaponAttachments(data.HitInfo).ToArray()));
+					replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo).ToArray()));
+				}
+				else if (data.KillerEntityType == CombatEntityType.Turret || data.KillerEntityType == CombatEntityType.Lock)
+				{
+					replacements.Add("owner",
+						covalence.Players.FindPlayerById(data.KillerEntity.OwnerID.ToString())?.Name ?? "unknown owner"
+					); // TODO: Work on the potential unknown owner case
 				}
 			}
 			
@@ -342,6 +336,12 @@ namespace Oxide.Plugins
 
 		private string GetEntityName(BaseEntity entity, CombatEntityType combatEntityType)
 		{
+			// Entity may be null for helicopter or bradley, see HandleExceptions(...)
+			if (entity == null && 
+				combatEntityType != CombatEntityType.Helicopter &&
+			    combatEntityType != CombatEntityType.Bradley)
+				return null;
+
 			switch (combatEntityType)
 			{
 				case CombatEntityType.Player:
@@ -367,9 +367,6 @@ namespace Oxide.Plugins
 				case CombatEntityType.Fire:
 					return entity.creatorEntity?.ToPlayer()?.displayName ?? "Fire";
 			}
-
-			if (entity == null)
-				return null;
 			
 			if (_enemyPrefabs.Contents.ContainsKey(entity.ShortPrefabName))
 				return _enemyPrefabs.Contents[entity.ShortPrefabName];
@@ -431,7 +428,7 @@ namespace Oxide.Plugins
 			}
 
 			// Workaround for deaths caused by flamethrower or rocket fire 
-			var flame = data.KillerEntity?.gameObject?.GetComponent<Flame>();
+			var flame = data.KillerEntity?.GetComponent<Flame>();
 			if (flame != null && flame.Initiator != null)
 			{
 				data.KillerEntity = flame.Initiator;
@@ -471,11 +468,6 @@ namespace Oxide.Plugins
 				Flamethrower,
 				IncendiaryProjectile
 			}
-
-			public override string ToString()
-			{
-				return $"{Initiator} {SourceEntity} ({Source})";
-			}
 		}
 
 		#endregion
@@ -508,7 +500,7 @@ namespace Oxide.Plugins
 			if (item != null)
 				return item.displayName.english;
 
-			var prefab = hitInfo.Initiator?.gameObject?.GetComponent<Flame>()?.SourceEntity?.ShortPrefabName ??
+			var prefab = hitInfo.Initiator?.GetComponent<Flame>()?.SourceEntity?.ShortPrefabName ??
 			             hitInfo.WeaponPrefab?.ShortPrefabName;
 
 			if (prefab != null)
@@ -522,10 +514,25 @@ namespace Oxide.Plugins
 			return null;
 		}
 
-		private static List<string> GetWeaponAttachments(HitInfo info)
+		private List<string> GetCustomizedAttachmentNames(HitInfo info)
 		{
-			var item = info?.Weapon?.GetItem();
-			return item?.contents?.itemList?.Select(i => i.info.displayName.english).ToList() ?? new List<string>();
+			var items = info?.Weapon?.GetItem()?.contents?.itemList;
+
+			if (items == null)
+				return new List<string>();
+
+			return items.Select(i => GetCustomizedAttachmentName(i.info.displayName.english)).ToList();
+		}
+
+		private string GetCustomizedAttachmentName(string name)
+		{
+			if (!_configuration.Translations.Attachments.ContainsKey(name))
+			{
+				_configuration.Translations.Attachments.Add(name, name);
+				Config.WriteObject(_configuration);
+			}
+
+			return _configuration.Translations.Attachments[name];
 		}
 
 		#endregion
@@ -550,7 +557,7 @@ namespace Oxide.Plugins
 
 		private string GetBodypartName(HitInfo hitInfo)
 		{
-			var hitArea = hitInfo.boneArea;
+			var hitArea = hitInfo?.boneArea ?? (HitArea) (-1);
 			return (int) hitArea == -1 ? "Body" : hitArea.ToString();
 		}
 
@@ -558,6 +565,7 @@ namespace Oxide.Plugins
 
 		#region Helper
 
+#if DEBUG
 		private static void LogDebug(string text)
 		{
 			if (BasePlayer.activePlayerList.Count >= 1)
@@ -565,6 +573,7 @@ namespace Oxide.Plugins
 				BasePlayer.activePlayerList[0].ConsoleMessage($"<color=orange>{text}</color>");
 			}
 		}
+#endif
 
 		private static string GetDistance(float meters, bool useMetric)
 		{
@@ -753,6 +762,9 @@ namespace Oxide.Plugins
 
 				[JsonProperty("Weapons")]
 				public Dictionary<string, string> Weapons = new Dictionary<string, string>();
+
+				[JsonProperty("Attachments")]
+				public Dictionary<string, string> Attachments = new Dictionary<string, string>();
 			}
 		}
 
@@ -779,9 +791,10 @@ namespace Oxide.Plugins
 						Contents = JsonConvert.DeserializeObject<T>(response);
 						callback?.Invoke(true);
 					}
-					catch (Exception)
+					catch (Exception ex)
 					{
 						_instance.PrintError($"Could not load remote config '{_file}'. Please report the issue to the plugin author if this is happening frequently.");
+						_instance.PrintError($"[{code}] - {ex.GetType().Name}: {ex.Message}");
 						callback?.Invoke(false);
 					}
 				}, _instance);
