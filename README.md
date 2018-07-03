@@ -1,4 +1,4 @@
-﻿**Death Notes** allows you to broadcast deaths of different variety to chat, including information like the weapon used and which bodypart was hit.
+**Death Notes** allows you to broadcast deaths of different variety to chat, including information like the weapon used and which body part was hit.
 
 ## Localization
 
