@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-	[Info("Death Notes", "LaserHydra", "6.0.5")]
+	[Info("Death Notes", "LaserHydra", "6.0.6")]
 	public class DeathNotes : RustPlugin
 	{
 		#region Fields
@@ -112,6 +112,10 @@ namespace Oxide.Plugins
 		{
 			// Ignore - there is no victim for some reason
 			if (victimEntity == null)
+				return;
+
+			// Try to avoid error when entity was destroyed
+			if (victimEntity.gameObject == null)
 				return;
 
 			var data = new DeathData
@@ -265,13 +269,13 @@ namespace Oxide.Plugins
 		private struct DeathData
 		{
 			public CombatEntityType VictimEntityType { get; set; }
-			public BaseCombatEntity VictimEntity { get; set; }
+			[JsonIgnore] public BaseCombatEntity VictimEntity { get; set; }
 
 			public CombatEntityType KillerEntityType { get; set; }
-			public BaseEntity KillerEntity { get; set; }
+			[JsonIgnore] public BaseEntity KillerEntity { get; set; }
 
 			public DamageType DamageType { get; set; }
-			public HitInfo HitInfo { get; set; }
+			[JsonIgnore] public HitInfo HitInfo { get; set; }
 
 			public Dictionary<string, object> ToDictionary() => new Dictionary<string, object>
 			{
@@ -350,13 +354,14 @@ namespace Oxide.Plugins
 				case CombatEntityType.Helicopter:
 					return "Helicopter";
 
-				case CombatEntityType.Murderer:
-					var murdererName = entity.ToPlayer()?.displayName;
-					return string.IsNullOrEmpty(murdererName) ? "Murderer" : murdererName;
-
 				case CombatEntityType.Scientist:
-					var scientistName = entity.ToPlayer()?.displayName;
-					return string.IsNullOrEmpty(scientistName) ? "Scientist" : scientistName;
+				case CombatEntityType.Murderer:
+					var name = entity.ToPlayer()?.displayName;
+
+					return
+						string.IsNullOrEmpty(name) || name == entity.ToPlayer()?.userID.ToString()
+							? combatEntityType.ToString()
+							: name;
 
 				case CombatEntityType.Bradley:
 					return "Bradley APC";
@@ -427,13 +432,20 @@ namespace Oxide.Plugins
 				}
 			}
 
-			// Workaround for deaths caused by flamethrower or rocket fire 
-			var flame = data.KillerEntity?.GetComponent<Flame>();
-			if (flame != null && flame.Initiator != null)
+			try
 			{
-				data.KillerEntity = flame.Initiator;
-				data.KillerEntityType = CombatEntityType.Player;
-				return;
+				// Workaround for deaths caused by flamethrower or rocket fire 
+				var flame = data.KillerEntity?.gameObject?.GetComponent<Flame>();
+				if (flame != null && flame.Initiator != null)
+				{
+					data.KillerEntity = flame.Initiator;
+					data.KillerEntityType = CombatEntityType.Player;
+					return;
+				}
+			}
+			catch (Exception e)
+			{
+				PrintError($"Exception while trying to access Flame component: {e}\n\nDeath Details: {JsonConvert.SerializeObject(data)}");
 			}
 
 			// Bradley kill with main cannon
@@ -788,17 +800,24 @@ namespace Oxide.Plugins
 				{
 					try
 					{
+						if (!IsSuccessStatusCode(code))
+							throw new Exception($"Status code indicates failure. Code: {code}");
+
 						Contents = JsonConvert.DeserializeObject<T>(response);
 						callback?.Invoke(true);
 					}
 					catch (Exception ex)
 					{
-						_instance.PrintError($"Could not load remote config '{_file}'. Please report the issue to the plugin author if this is happening frequently.");
-						_instance.PrintError($"[{code}] - {ex.GetType().Name}: {ex.Message}");
+						_instance.PrintError($"Could not load remote config '{_file}'. Please RELOAD THE PLUGIN and report the issue to the plugin author if this is happening frequently.");
+						_instance.PrintError($"[Code {code}] - {ex.GetType().Name}: {ex.Message}");
+						_instance.PrintError($"Response: {response}");
+
 						callback?.Invoke(false);
 					}
 				}, _instance);
 			}
+
+			private bool IsSuccessStatusCode(int code) => code >= 200 && code < 300;
 		}
 
 		#endregion
