@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-	[Info("Death Notes", "LaserHydra", "6.0.6")]
+	[Info("Death Notes", "LaserHydra", "6.1.0")]
 	public class DeathNotes : RustPlugin
 	{
 		#region Fields
@@ -129,7 +129,7 @@ namespace Oxide.Plugins
 			};
 
 			// Handle inconsistencies/exceptions
-			HandleExceptions(ref data);
+			HandleInconsistencies(ref data);
 
 #if DEBUG
 			LogDebug("[DEATHNOTES DEBUG]");
@@ -252,7 +252,9 @@ namespace Oxide.Plugins
 					replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
 					replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo).ToArray()));
 				}
-				else if (data.KillerEntityType == CombatEntityType.Turret || data.KillerEntityType == CombatEntityType.Lock)
+				else if (data.KillerEntityType == CombatEntityType.Turret 
+					|| data.KillerEntityType == CombatEntityType.Lock 
+					|| data.KillerEntityType == CombatEntityType.Trap)
 				{
 					replacements.Add("owner",
 						covalence.Players.FindPlayerById(data.KillerEntity.OwnerID.ToString())?.Name ?? "unknown owner"
@@ -401,10 +403,14 @@ namespace Oxide.Plugins
 
 		#endregion
 
-		#region Workarounds and Inconsistency/Exception Handling
+		#region Workarounds and Inconsistency Handling
 
-		private void HandleExceptions(ref DeathData data)
+		private void HandleInconsistencies(ref DeathData data)
 		{
+			// Deaths of other entity types are not of interest and might cause errors
+			if (data.VictimEntityType == CombatEntityType.Other)
+				return;
+
 			if (data.KillerEntity is FireBall)
 				data.DamageType = DamageType.Heat;
 
@@ -431,21 +437,24 @@ namespace Oxide.Plugins
 						data.DamageType = DamageType.Bleeding;
 				}
 			}
-
-			try
+			
+			if (data.KillerEntityType != CombatEntityType.None)
 			{
-				// Workaround for deaths caused by flamethrower or rocket fire 
-				var flame = data.KillerEntity?.gameObject?.GetComponent<Flame>();
-				if (flame != null && flame.Initiator != null)
+				try
 				{
-					data.KillerEntity = flame.Initiator;
-					data.KillerEntityType = CombatEntityType.Player;
-					return;
+					// Workaround for deaths caused by flamethrower or rocket fire 
+					var flame = data.KillerEntity?.gameObject?.GetComponent<Flame>();
+					if (flame?.Initiator != null)
+					{
+						data.KillerEntity = flame.Initiator;
+						data.KillerEntityType = CombatEntityType.Player;
+						return;
+					}
 				}
-			}
-			catch (Exception e)
-			{
-				PrintError($"Exception while trying to access Flame component: {e}\n\nDeath Details: {JsonConvert.SerializeObject(data)}");
+				catch (Exception e)
+				{
+					PrintError($"Exception while trying to access Flame component: {e}\n\nDeath Details: {JsonConvert.SerializeObject(data)}");
+				}
 			}
 
 			// Bradley kill with main cannon

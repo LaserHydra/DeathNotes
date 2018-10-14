@@ -34,6 +34,11 @@ Therefor you have to specify the `KillerType`, `VictimType` and `DamageType` des
 The message example above is used when a player kills another player doing bullet damage.
 You can use the default configuration as an example on what it looks like when having multiple message blocks, doing this it is important you don't forget comma.
 
+**`*` and `-` can also be used for KillerType, VictimType, or DamageType.**  
+- **`*` matches any possible killer/victim/damage type**
+- **`-` matches if there is no killer/victim/damage type. This usually only applies to the killer.**
+
+
 ### Available Killer/Victim Types
 
 ```yaml
@@ -95,9 +100,9 @@ Available for deaths involving a killer:
 - {distance} : Distance between killer and victim
 ```
 
-Available for deaths involving a Lock or Turret as the killer:
+Available for deaths involving a Lock, Trap, or Turret as the killer:
 ```yaml
-- {owner} : Name of the lock/turret owner
+- {owner} : Name of the lock/trap/turret owner
 ```
 
 Available for deaths involving a Player as the killer:
@@ -162,7 +167,8 @@ Available for deaths involving a Player as the killer:
   "Chat Icon (SteamID)": "76561198077847390",
   "Show Kills in Console": true,
   "Show Kills in Chat": true,
-  "Use Metric Distance": false
+  "MessageRadius": -1,
+  "Use Metric Distance": true
 }
 ```
 
