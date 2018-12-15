@@ -35,7 +35,7 @@ The message example above is used when a player kills another player doing bulle
 You can use the default configuration as an example on what it looks like when having multiple message blocks, doing this it is important you don't forget comma.
 
 **`*` and `-` can also be used for KillerType, VictimType, or DamageType.**  
-- **`*` matches any possible killer/victim/damage type**
+- **`*` matches any possible killer/victim/damage type, including a situation with no killer/victim/damage type**
 - **`-` matches if there is no killer/victim/damage type. This usually only applies to the killer.**
 
 
