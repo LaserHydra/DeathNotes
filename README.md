@@ -177,5 +177,6 @@ Available for deaths involving a Player as the killer:
 ### Hooks
 
 ```csharp
-void OnDeathNotice(Dictionary<string, object> data, string message)
+object OnDeathNotice(Dictionary<string, object> data, string message)
+// Return false to cancel death message
 ```

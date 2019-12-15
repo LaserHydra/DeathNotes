@@ -16,8 +16,8 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.2.0")]
-    public class DeathNotes : RustPlugin
+    [Info("Death Notes", "LaserHydra", "6.3.0")]
+    class DeathNotes : RustPlugin
     {
         #region Fields
 
@@ -167,7 +167,10 @@ namespace Oxide.Plugins
             if (message == null)
                 return;
 
-            Interface.Call("OnDeathNotice", data.ToDictionary(), message);
+            object hookResult = Interface.Call("OnDeathNotice", data.ToDictionary(), message);
+
+            if (hookResult.Equals(false))
+                return;
 
             if (_configuration.ShowInChat)
             {
@@ -827,14 +830,27 @@ namespace Oxide.Plugins
 
                         Contents = JsonConvert.DeserializeObject<T>(response);
                         callback?.Invoke(true);
+
+                        Interface.Oxide.DataFileSystem.WriteObject($"{nameof(DeathNotes)}/{_file}", Contents);
                     }
                     catch (Exception ex)
                     {
-                        _instance.PrintError($"Could not load remote config '{_file}'. Please RELOAD THE PLUGIN and report the issue to the plugin author if this is happening frequently.");
-                        _instance.PrintError($"[Code {code}] {ex.GetType().Name}: {ex.Message}");
-                        _instance.PrintError($"Response: {response}");
+                        if (Interface.Oxide.DataFileSystem.ExistsDatafile($"{nameof(DeathNotes)}/{_file}"))
+                        {
+                            Contents = Interface.Oxide.DataFileSystem.ReadObject<T>($"{nameof(DeathNotes)}/{_file}");
 
-                        callback?.Invoke(false);
+                            _instance.PrintWarning($"Could not load remote config '{_file}'. The plugin will be using the previously downloaded file. Please report this issue to the plugin author if it is happening frequently.");
+
+                            callback?.Invoke(true);
+                        }
+                        else
+                        {
+                            _instance.PrintError($"Could not load remote config '{_file}'. The plugin will not work properly. Please RELOAD THE PLUGIN and report this issue to the plugin author if it is happening frequently.");
+                            _instance.PrintError($"[Code {code}] {ex.GetType().Name}: {ex.Message}");
+                            _instance.PrintError($"Response: {response}");
+
+                            callback?.Invoke(false);
+                        }
                     }
                 }, _instance);
             }
