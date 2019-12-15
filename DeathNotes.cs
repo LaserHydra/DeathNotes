@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.0")]
+    [Info("Death Notes", "LaserHydra", "6.3.1")]
     class DeathNotes : RustPlugin
     {
         #region Fields
@@ -169,7 +169,7 @@ namespace Oxide.Plugins
 
             object hookResult = Interface.Call("OnDeathNotice", data.ToDictionary(), message);
 
-            if (hookResult.Equals(false))
+            if (hookResult?.Equals(false) ?? false)
                 return;
 
             if (_configuration.ShowInChat)
