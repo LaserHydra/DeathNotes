@@ -70,6 +70,15 @@ You can use the default configuration as an example on what it looks like when h
 - ScientistSentry
 ```
 
+Enabling "Use Defined Traps" in the config seperates the "Trap" Killer Type to the following defined types, any that cannot be matched will list as the default of "Trap".  
+This allows you to have different DeathNote messages for differing traps (some which include the owner of the trap and some that do not).
+
+```yaml
+- Landmine
+- ShotgunTrap
+- BearTrap
+```
+
 
 ### Available Damage Types
 
@@ -180,7 +189,8 @@ Available for deaths involving a Player as the killer:
   "Show Kills in Console": true,
   "Show Kills in Chat": true,
   "MessageRadius": -1,
-  "Use Metric Distance": true
+  "Use Metric Distance": true,
+  "Use Defined Traps": false
 }
 ```
 

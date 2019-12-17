@@ -267,7 +267,10 @@ namespace Oxide.Plugins
                 }
                 else if (data.KillerEntityType == CombatEntityType.Turret
                     || data.KillerEntityType == CombatEntityType.Lock
-                    || data.KillerEntityType == CombatEntityType.Trap)
+                    || data.KillerEntityType == CombatEntityType.Trap
+                    || data.KillerEntityType == CombatEntityType.Landmine
+                    || data.KillerEntityType == CombatEntityType.BearTrap
+                    || data.KillerEntityType == CombatEntityType.ShotgunTrap)
                 {
                     replacements.Add("owner",
                         covalence.Players.FindPlayerById(data.KillerEntity.OwnerID.ToString())?.Name ?? "unknown owner"
@@ -312,8 +315,38 @@ namespace Oxide.Plugins
             if (entity == null)
                 return CombatEntityType.None;
 
+            // START AC - Check setting, allow filtering by Type
+
+            // First, lets check to see if this is a deployed guntrap
+            // This needs to go BEFORE the next default section to ensure that the 
+            // guntrap is not picked up as a standard trap!
+            if (entity.GetType().Name == "GunTrap")
+                return !_configuration.UseDefinedTraps
+                    ? CombatEntityType.Trap
+                    : CombatEntityType.ShotgunTrap;
+
             if (_combatEntityTypes.Contents != null && _combatEntityTypes.Contents.ContainsKey(entity.GetType().Name))
                 return _combatEntityTypes.Contents[entity.GetType().Name];
+
+            // Now deal with all other trap types
+            if (entity is BaseTrap)
+            {
+                if (!_configuration.UseDefinedTraps)
+                    return CombatEntityType.Trap;
+
+                switch (entity.GetType().Name)
+                {
+                    case "Landmine":
+                        return CombatEntityType.Landmine;
+                    case "GunTrap":
+                        return CombatEntityType.ShotgunTrap;
+                    case "BearTrap":
+                        return CombatEntityType.BearTrap;
+                    default:
+                        return CombatEntityType.Trap;
+                }
+            }
+            // END AC
 
             if (entity is BaseOven)
                 return CombatEntityType.HeatSource;
@@ -323,9 +356,6 @@ namespace Oxide.Plugins
 
             if (entity is BaseAnimalNPC)
                 return CombatEntityType.Animal;
-
-            if (entity is BaseTrap)
-                return CombatEntityType.Trap;
 
             if (entity is Barricade)
                 return CombatEntityType.Barricade;
@@ -411,7 +441,12 @@ namespace Oxide.Plugins
             Lock = 12,
             ScientistSentry = 13,
             Other = 14,
-            None = 15
+            None = 15,
+            // START AC - Possible Traps
+            BearTrap = 16,
+            Landmine = 17,
+            ShotgunTrap = 18
+            // END AC - Possible Traps
         }
 
         #endregion
@@ -756,6 +791,11 @@ namespace Oxide.Plugins
 
             [JsonProperty("Require Permission (deathnotes.cansee)")]
             public bool RequirePermission = false;
+
+            // START AC - Use Defined Traps
+            [JsonProperty("Use Defined Traps")]
+            public bool UseDefinedTraps = false;
+            // END AC - Use Defined Traps
 
             public void LoadDefaults()
             {
