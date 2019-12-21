@@ -267,7 +267,8 @@ namespace Oxide.Plugins
                 }
                 else if (data.KillerEntityType == CombatEntityType.Turret
                     || data.KillerEntityType == CombatEntityType.Lock
-                    || data.KillerEntityType == CombatEntityType.Trap)
+                    || data.KillerEntityType == CombatEntityType.Trap
+                    || data.KillerEntityType == CombatEntityType.IOEntity)
                 {
                     replacements.Add("owner",
                         covalence.Players.FindPlayerById(data.KillerEntity.OwnerID.ToString())?.Name ?? "unknown owner"
@@ -329,6 +330,9 @@ namespace Oxide.Plugins
 
             if (entity is Barricade)
                 return CombatEntityType.Barricade;
+
+            if (entity is IOEntity)
+                return CombatEntityType.IOEntity;
 
             return CombatEntityType.Other;
         }
@@ -411,7 +415,8 @@ namespace Oxide.Plugins
             Lock = 12,
             ScientistSentry = 13,
             Other = 14,
-            None = 15
+            None = 15,
+            IOEntity = 16
         }
 
         #endregion
