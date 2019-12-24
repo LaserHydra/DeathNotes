@@ -11,7 +11,6 @@
   - [CombatEntityTypes.json](http://files.laserhydra.com/config/DeathNotes/CombatEntityTypes)
   - [DefaultMessages.json](http://files.laserhydra.com/config/DeathNotes/DefaultMessages)
 
-
 ## Localization
 
 ```json
@@ -50,7 +49,6 @@ You can use the default configuration as an example on what it looks like when h
 - **`*` matches any possible killer/victim/damage type, including a situation with no killer/victim/damage type**
 - **`-` matches if there is no killer/victim/damage type. This usually only applies to the killer.**
 
-
 ### Available Killer/Victim Types
 
 ```yaml
@@ -69,7 +67,6 @@ You can use the default configuration as an example on what it looks like when h
 - Lock
 - ScientistSentry
 ```
-
 
 ### Available Damage Types
 
