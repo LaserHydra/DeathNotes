@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.1")]
+    [Info("Death Notes", "LaserHydra", "6.3.2")]
     class DeathNotes : RustPlugin
     {
         #region Fields
@@ -267,8 +267,7 @@ namespace Oxide.Plugins
                 }
                 else if (data.KillerEntityType == CombatEntityType.Turret
                     || data.KillerEntityType == CombatEntityType.Lock
-                    || data.KillerEntityType == CombatEntityType.Trap
-                    || data.KillerEntityType == CombatEntityType.IOEntity)
+                    || data.KillerEntityType == CombatEntityType.Trap)
                 {
                     replacements.Add("owner",
                         covalence.Players.FindPlayerById(data.KillerEntity.OwnerID.ToString())?.Name ?? "unknown owner"
@@ -332,7 +331,7 @@ namespace Oxide.Plugins
                 return CombatEntityType.Barricade;
 
             if (entity is IOEntity)
-                return CombatEntityType.IOEntity;
+                return CombatEntityType.Trap;
 
             return CombatEntityType.Other;
         }
@@ -415,8 +414,7 @@ namespace Oxide.Plugins
             Lock = 12,
             ScientistSentry = 13,
             Other = 14,
-            None = 15,
-            IOEntity = 16
+            None = 15
         }
 
         #endregion
