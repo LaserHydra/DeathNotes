@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.2")]
+    [Info("Death Notes", "LaserHydra", "6.3.3")]
     class DeathNotes : RustPlugin
     {
         #region Fields
@@ -140,8 +140,8 @@ namespace Oxide.Plugins
 
 #if DEBUG
             LogDebug("[DEATHNOTES DEBUG]");
-            LogDebug($"VictimEntity: {data.VictimEntity?.GetType().Name ?? "NULL"} / {data.VictimEntity?.name ?? "NULL"}");
-            LogDebug($"KillerEntity: {data.KillerEntity?.GetType().Name ?? "NULL"} / {data.KillerEntity?.name ?? "NULL"}");
+            LogDebug($"VictimEntity: {data.VictimEntity?.GetType().Name ?? "NULL"} / {data.VictimEntity?.ShortPrefabName ?? "NULL"} / {data.VictimEntity?.PrefabName ?? "NULL"}");
+            LogDebug($"KillerEntity: {data.KillerEntity?.GetType().Name ?? "NULL"} / {data.KillerEntity?.ShortPrefabName ?? "NULL"} / {data.VictimEntity?.PrefabName ?? "NULL"}");
             LogDebug($"VictimEntityType: {data.VictimEntityType}");
             LogDebug($"KillerEntityType: {data.KillerEntityType}");
             LogDebug($"DamageType: {data.DamageType}");
@@ -184,7 +184,7 @@ namespace Oxide.Plugins
 
                     Player.Reply(
                         player,
-                        _configuration.ChatFormat.Replace("{message}", message), 
+                        _configuration.ChatFormat.Replace("{message}", message),
                         ulong.Parse(_configuration.ChatIcon)
                     );
                 }
@@ -225,7 +225,7 @@ namespace Oxide.Plugins
         private void OnFireBallDamage(FireBall fireBall, BaseCombatEntity target, HitInfo hitInfo) => hitInfo.Initiator = fireBall;
 
         #endregion
-        
+
         #region Death Messages
 
         private string GetDeathMessage(DeathData data)
@@ -259,11 +259,15 @@ namespace Oxide.Plugins
                 var distance = data.KillerEntity.Distance(data.VictimEntity);
                 replacements.Add("distance", GetDistance(distance, _configuration.UseMetricDistance));
 
+                if (data.HitInfo.Weapon != null)
+                {
+                    replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
+                    replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo).ToArray()));
+                }
+
                 if (data.KillerEntityType == CombatEntityType.Player)
                 {
                     replacements.Add("hp", data.KillerEntity.Health().ToString("#0.#"));
-                    replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
-                    replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo).ToArray()));
                 }
                 else if (data.KillerEntityType == CombatEntityType.Turret
                     || data.KillerEntityType == CombatEntityType.Lock
@@ -274,7 +278,7 @@ namespace Oxide.Plugins
                     ); // TODO: Work on the potential unknown owner case
                 }
             }
-            
+
             message = InsertPlaceholderValues(message, replacements);
 
             replacements = null;
@@ -312,8 +316,14 @@ namespace Oxide.Plugins
             if (entity == null)
                 return CombatEntityType.None;
 
-            if (_combatEntityTypes.Contents != null && _combatEntityTypes.Contents.ContainsKey(entity.GetType().Name))
-                return _combatEntityTypes.Contents[entity.GetType().Name];
+            if (_combatEntityTypes.Contents != null)
+            {
+                if (_combatEntityTypes.Contents.ContainsKey(entity.ShortPrefabName))
+                    return _combatEntityTypes.Contents[entity.ShortPrefabName];
+
+                if (_combatEntityTypes.Contents.ContainsKey(entity.GetType().Name))
+                    return _combatEntityTypes.Contents[entity.GetType().Name];
+            }
 
             if (entity is BaseOven)
                 return CombatEntityType.HeatSource;
@@ -359,7 +369,7 @@ namespace Oxide.Plugins
         private string GetEntityName(BaseEntity entity, CombatEntityType combatEntityType)
         {
             // Entity may be null for helicopter or bradley, see HandleExceptions(...)
-            if (entity == null && 
+            if (entity == null &&
                 combatEntityType != CombatEntityType.Helicopter &&
                 combatEntityType != CombatEntityType.Bradley)
                 return null;
@@ -374,6 +384,7 @@ namespace Oxide.Plugins
 
                 case CombatEntityType.Scientist:
                 case CombatEntityType.Murderer:
+                case CombatEntityType.Scarecrow:
                     var name = entity.ToPlayer()?.displayName;
 
                     return
@@ -390,7 +401,7 @@ namespace Oxide.Plugins
                 case CombatEntityType.Fire:
                     return entity.creatorEntity?.ToPlayer()?.displayName ?? "Fire";
             }
-            
+
             if (_enemyPrefabs.Contents.ContainsKey(entity.ShortPrefabName))
                 return _enemyPrefabs.Contents[entity.ShortPrefabName];
 
@@ -404,6 +415,7 @@ namespace Oxide.Plugins
             Animal = 2,
             Murderer = 3,
             Scientist = 4,
+            Scarecrow = 16,
             Player = 5,
             Trap = 6,
             Turret = 7,
@@ -430,6 +442,14 @@ namespace Oxide.Plugins
             if (data.KillerEntity is FireBall)
                 data.DamageType = DamageType.Heat;
 
+            // If the killer entity is null, but a weapon is given, we might be able to fall back to the parent entity of that weapon
+            // Notably for the auto turret after the changes it has had
+            if (data.KillerEntity == null && data.HitInfo?.Weapon != null)
+            {
+                data.KillerEntity = data.HitInfo.Weapon.GetParentEntity();
+                data.KillerEntityType = GetCombatEntityType(data.KillerEntity);
+            }
+
             // Get previous attacker when bleeding out
             if (data.VictimEntityType == CombatEntityType.Player && (data.DamageType == DamageType.Bleeding || data.HitInfo == null))
             {
@@ -453,7 +473,7 @@ namespace Oxide.Plugins
                         data.DamageType = DamageType.Bleeding;
                 }
             }
-            
+
             if (data.KillerEntityType != CombatEntityType.None)
             {
                 try
@@ -532,10 +552,21 @@ namespace Oxide.Plugins
             if (hitInfo == null)
                 return null;
 
-            var item = hitInfo.Weapon?.GetItem()?.info;
+            Item item = hitInfo.Weapon?.GetItem();
+            /*var parentEntity = hitInfo.Weapon?.GetParentEntity();
+            Item item = null;
+
+            if (parentEntity is BasePlayer)
+            {
+                (parentEntity as BasePlayer).inventory.FindItemUID(hitInfo.Weapon.ownerItemUID);
+            }
+            else if (parentEntity is ContainerIOEntity)
+            {
+                (parentEntity as ContainerIOEntity).inventory.FindItemByUID(hitInfo.Weapon.ownerItemUID);
+            }*/
 
             if (item != null)
-                return item.displayName.english;
+                return item.info.displayName.english;
 
             var prefab = hitInfo.Initiator?.GetComponent<Flame>()?.SourceEntity?.ShortPrefabName ??
                          hitInfo.WeaponPrefab?.ShortPrefabName;
@@ -594,8 +625,8 @@ namespace Oxide.Plugins
 
         private string GetBodypartName(HitInfo hitInfo)
         {
-            var hitArea = hitInfo?.boneArea ?? (HitArea) (-1);
-            return (int) hitArea == -1 ? "Body" : hitArea.ToString();
+            var hitArea = hitInfo?.boneArea ?? (HitArea)(-1);
+            return (int)hitArea == -1 ? "Body" : hitArea.ToString();
         }
 
         #endregion
@@ -618,7 +649,7 @@ namespace Oxide.Plugins
             string unit = value == 1
                 ? _instance.lang.GetMessage("Distance Unit Singular", _instance)
                 : _instance.lang.GetMessage("Distance Unit Plural", _instance);
-            
+
             return $"{value} {unit}";
         }
 
@@ -796,7 +827,7 @@ namespace Oxide.Plugins
 
                 [JsonProperty("Names")]
                 public Dictionary<string, string> Names = new Dictionary<string, string>();
-                
+
                 [JsonProperty("Bodyparts")]
                 public Dictionary<string, string> Bodyparts = new Dictionary<string, string>();
 
