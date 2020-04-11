@@ -6,10 +6,10 @@
     
   **Solution:** If you're experiencing issues with downloading remote configs, please manually download them from the following sites and store them in /data/DeathNotes/ with these names
 
-  - [WeaponPrefabs.json](http://files.laserhydra.com/config/DeathNotes/WeaponPrefabs)
-  - [EnemyPrefabs.json](http://files.laserhydra.com/config/DeathNotes/EnemyPrefabs)
-  - [CombatEntityTypes.json](http://files.laserhydra.com/config/DeathNotes/CombatEntityTypes)
-  - [DefaultMessages.json](http://files.laserhydra.com/config/DeathNotes/DefaultMessages)
+  - [WeaponPrefabs.json](https//files.laserhydra.com/config/DeathNotes/WeaponPrefabs)
+  - [EnemyPrefabs.json](https://files.laserhydra.com/config/DeathNotes/EnemyPrefabs)
+  - [CombatEntityTypes.json](https://files.laserhydra.com/config/DeathNotes/CombatEntityTypes)
+  - [DefaultMessages.json](https://files.laserhydra.com/config/DeathNotes/DefaultMessages)
 
 ## Localization
 
