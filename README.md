@@ -4,7 +4,7 @@
 
 - **Problem:** I'm getting some errors about remote configurations and the plugin doesn't work  
     
-  **Solution:** If you're experiencing issues with downloads remote configs, please manually download them from the following sites and store them in /data/DeathNotes/ with these names
+  **Solution:** If you're experiencing issues with downloading remote configs, please manually download them from the following sites and store them in /data/DeathNotes/ with these names
 
   - [WeaponPrefabs.json](http://files.laserhydra.com/config/DeathNotes/WeaponPrefabs)
   - [EnemyPrefabs.json](http://files.laserhydra.com/config/DeathNotes/EnemyPrefabs)
