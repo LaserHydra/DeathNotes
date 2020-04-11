@@ -6,7 +6,7 @@
     
   **Solution:** If you're experiencing issues with downloading remote configs, please manually download them from the following sites and store them in /data/DeathNotes/ with these names
 
-  - [WeaponPrefabs.json](https//files.laserhydra.com/config/DeathNotes/WeaponPrefabs)
+  - [WeaponPrefabs.json](https://files.laserhydra.com/config/DeathNotes/WeaponPrefabs)
   - [EnemyPrefabs.json](https://files.laserhydra.com/config/DeathNotes/EnemyPrefabs)
   - [CombatEntityTypes.json](https://files.laserhydra.com/config/DeathNotes/CombatEntityTypes)
   - [DefaultMessages.json](https://files.laserhydra.com/config/DeathNotes/DefaultMessages)
@@ -57,6 +57,7 @@ You can use the default configuration as an example on what it looks like when h
 - Animal
 - Murderer
 - Scientist
+- Scarecrow
 - Player
 - Trap
 - Turret
