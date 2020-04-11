@@ -1,4 +1,4 @@
-﻿#define DEBUG
+﻿// #define DEBUG
 
 using Newtonsoft.Json;
 using Oxide.Core;
@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.3")]
+    [Info("Death Notes", "LaserHydra", "6.3.4")]
     class DeathNotes : RustPlugin
     {
         #region Fields
