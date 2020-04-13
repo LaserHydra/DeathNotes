@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.4")]
+    [Info("Death Notes", "LaserHydra", "6.3.5")]
     class DeathNotes : RustPlugin
     {
         #region Fields
@@ -141,7 +141,7 @@ namespace Oxide.Plugins
 #if DEBUG
             LogDebug("[DEATHNOTES DEBUG]");
             LogDebug($"VictimEntity: {data.VictimEntity?.GetType().Name ?? "NULL"} / {data.VictimEntity?.ShortPrefabName ?? "NULL"} / {data.VictimEntity?.PrefabName ?? "NULL"}");
-            LogDebug($"KillerEntity: {data.KillerEntity?.GetType().Name ?? "NULL"} / {data.KillerEntity?.ShortPrefabName ?? "NULL"} / {data.VictimEntity?.PrefabName ?? "NULL"}");
+            LogDebug($"KillerEntity: {data.KillerEntity?.GetType().Name ?? "NULL"} / {data.KillerEntity?.ShortPrefabName ?? "NULL"} / {data.KillerEntity?.PrefabName ?? "NULL"}");
             LogDebug($"VictimEntityType: {data.VictimEntityType}");
             LogDebug($"KillerEntityType: {data.KillerEntityType}");
             LogDebug($"DamageType: {data.DamageType}");
@@ -251,23 +251,22 @@ namespace Oxide.Plugins
                 ["victim"] = GetCustomizedEntityName(data.VictimEntity, data.VictimEntityType)
             };
 
-            if (data.KillerEntity != null)
+            if (data.KillerEntityType != CombatEntityType.None)
             {
                 replacements.Add("killer", GetCustomizedEntityName(data.KillerEntity, data.KillerEntityType));
                 replacements.Add("bodypart", GetCustomizedBodypartName(data.HitInfo));
 
-                var distance = data.KillerEntity.Distance(data.VictimEntity);
-                replacements.Add("distance", GetDistance(distance, _configuration.UseMetricDistance));
-
-                if (data.HitInfo.Weapon != null)
+                if (data.KillerEntity != null)
                 {
-                    replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
-                    replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo).ToArray()));
+                    var distance = data.KillerEntity.Distance(data.VictimEntity);
+                    replacements.Add("distance", GetDistance(distance, _configuration.UseMetricDistance));
                 }
 
                 if (data.KillerEntityType == CombatEntityType.Player)
                 {
                     replacements.Add("hp", data.KillerEntity.Health().ToString("#0.#"));
+                    replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
+                    replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo).ToArray()));
                 }
                 else if (data.KillerEntityType == CombatEntityType.Turret
                     || data.KillerEntityType == CombatEntityType.Lock
@@ -873,13 +872,13 @@ namespace Oxide.Plugins
                         {
                             Contents = Interface.Oxide.DataFileSystem.ReadObject<T>($"{nameof(DeathNotes)}/{_file}");
 
-                            _instance.PrintWarning($"Could not load remote config '{_file}'. The plugin will be using the previously downloaded file. Please report this issue to the plugin author if it is happening frequently.");
+                            _instance.PrintWarning($"Could not load remote config '{_file}'. The plugin will be using the previously downloaded file.");
 
                             callback?.Invoke(true);
                         }
                         else
                         {
-                            _instance.PrintError($"Could not load remote config '{_file}'. The plugin will not work properly. Please RELOAD THE PLUGIN and report this issue to the plugin author if it is happening frequently.");
+                            _instance.PrintError($"Could not load remote config '{_file}'. The plugin will not work properly. Please check whether you can access {ExactUrl} via your browser. If you can, please check the FAQ on how to solve this.");
                             _instance.PrintError($"[Code {code}] {ex.GetType().Name}: {ex.Message}");
                             _instance.PrintError($"Response: {response}");
 
