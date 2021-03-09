@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.6")]
+    [Info("Death Notes", "LaserHydra", "6.3.7")]
     class DeathNotes : RustPlugin
     {
         #region Fields
@@ -390,6 +390,10 @@ namespace Oxide.Plugins
                 case CombatEntityType.Scientist:
                 case CombatEntityType.Murderer:
                 case CombatEntityType.Scarecrow:
+
+                    if(entity.ShortPrefabName == "heavyscientist")
+                        return "Heavy Scientist";
+
                     var name = entity.ToPlayer()?.displayName;
 
                     return
