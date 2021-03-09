@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.5")]
+    [Info("Death Notes", "LaserHydra", "6.3.6")]
     class DeathNotes : RustPlugin
     {
         #region Fields
