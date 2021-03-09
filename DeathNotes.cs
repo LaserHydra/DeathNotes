@@ -381,6 +381,12 @@ namespace Oxide.Plugins
                 case CombatEntityType.Helicopter:
                     return "Helicopter";
 
+                case CombatEntityType.Other:
+                    return "Other";
+
+                case CombatEntityType.None:
+                    return "None";
+
                 case CombatEntityType.Scientist:
                 case CombatEntityType.Murderer:
                 case CombatEntityType.Scarecrow:
@@ -425,7 +431,8 @@ namespace Oxide.Plugins
             Lock = 12,
             ScientistSentry = 13,
             Other = 14,
-            None = 15
+            None = 15,
+            TunnelDweller = 17
         }
 
         #endregion
@@ -504,6 +511,16 @@ namespace Oxide.Plugins
                 data.KillerEntityType = CombatEntityType.Helicopter;
                 return;
             }
+
+            // Vehicle Kills
+            if (data.KillerEntityType == CombatEntityType.Player && data.DamageType == DamageType.Generic) {
+                if (data.KillerEntity.ToPlayer().isMounted)
+                {
+                    data.DamageType = DamageType.Collision;
+                    return;
+                }
+            }
+
         }
 
         private struct AttackInfo
