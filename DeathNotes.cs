@@ -1,4 +1,4 @@
-﻿// #define DEBUG
+// #define DEBUG
 
 using Newtonsoft.Json;
 using Oxide.Core;
@@ -158,16 +158,16 @@ namespace Oxide.Plugins
                 return;
 
             // Populate the variables in the message
-            string message = PopulateMessageVariables(
+            DMessage dMessage = PopulateMessageVariables(
                 // Find the best matching death message for this death
                 GetDeathMessage(data),
                 data
             );
 
-            if (message == null)
+            if (string.IsNullOrEmpty(dMessage.Message))
                 return;
 
-            object hookResult = Interface.Call("OnDeathNotice", data.ToDictionary(), message);
+            object hookResult = Interface.Call("OnDeathNotice", data.ToDictionary(), dMessage.Message);
 
             if (hookResult?.Equals(false) ?? false)
                 return;
@@ -182,16 +182,19 @@ namespace Oxide.Plugins
                     if (_configuration.MessageRadius != -1 && player.Distance(data.VictimEntity) > _configuration.MessageRadius)
                         continue;
 
+                    if (dMessage.MessageRadius != -1 && player.Distance(data.VictimEntity) > dMessage.MessageRadius)
+                        continue;
+
                     Player.Reply(
                         player,
-                        _configuration.ChatFormat.Replace("{message}", message),
+                        _configuration.ChatFormat.Replace("{message}", dMessage.Message),
                         ulong.Parse(_configuration.ChatIcon)
                     );
                 }
             }
 
             if (_configuration.ShowInConsole)
-                Puts(StripRichText(message));
+                Puts(StripRichText(dMessage.Message));
         }
 
         private void OnFlameThrowerBurn(FlameThrower flameThrower, BaseEntity baseEntity)
@@ -228,23 +231,36 @@ namespace Oxide.Plugins
 
         #region Death Messages
 
-        private string GetDeathMessage(DeathData data)
+        private struct DMessage
         {
+            public string Message { get; set; }
+            public int MessageRadius { get; set; }
+        }
+
+        private DMessage GetDeathMessage(DeathData data)
+        {
+            var dMessage = new DMessage
+            {
+                Message = null,
+                MessageRadius = -1,
+            };
             foreach (var matchingStage in _messageMatchingStages)
             {
                 var match = _configuration.Translations.Messages.Find(m => matchingStage.Invoke(m, data));
-
                 if (match != null)
-                    return match.Messages.GetRandom((uint)DateTime.UtcNow.Millisecond);
+                {
+                    dMessage.Message = match.Messages.GetRandom((uint)DateTime.UtcNow.Millisecond);
+                    dMessage.MessageRadius = match.MessageRadius > -1 ? match.MessageRadius : -1;
+                    return dMessage;
+                }
             }
-
-            return null;
+            return dMessage;
         }
 
-        private string PopulateMessageVariables(string message, DeathData data)
+        private DMessage PopulateMessageVariables(DMessage dMessage, DeathData data)
         {
-            if (string.IsNullOrEmpty(message))
-                return null;
+            if (string.IsNullOrEmpty(dMessage.Message))
+                return dMessage;
 
             var replacements = new Dictionary<string, string>
             {
@@ -278,10 +294,10 @@ namespace Oxide.Plugins
                 }
             }
 
-            message = InsertPlaceholderValues(message, replacements);
+            dMessage.Message = InsertPlaceholderValues(dMessage.Message, replacements);
 
             replacements = null;
-            return message;
+            return dMessage;
         }
 
         private struct DeathData
@@ -837,7 +853,7 @@ namespace Oxide.Plugins
                 public string KillerType { get; set; }
                 public string VictimType { get; set; }
                 public string DamageType { get; set; }
-
+                public int MessageRadius { get; set; }
                 public string[] Messages { get; set; }
 
                 protected bool Equals(DeathMessage other) => string.Equals(KillerType, other.KillerType) &&
