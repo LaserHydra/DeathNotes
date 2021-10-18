@@ -1,4 +1,4 @@
-﻿// #define DEBUG
+// #define DEBUG
 
 using Newtonsoft.Json;
 using Oxide.Core;
@@ -394,8 +394,8 @@ namespace Oxide.Plugins
                 case CombatEntityType.Bradley:
                     return "Bradley APC";
 
-                case CombatEntityType.ScientistSentry:
-                    return "Scientist Sentry";
+                case CombatEntityType.Sentry:
+                    return "Sentry";
 
                 case CombatEntityType.Fire:
                     return entity.creatorEntity?.ToPlayer()?.displayName ?? "Fire";
@@ -423,7 +423,7 @@ namespace Oxide.Plugins
             HeatSource = 10,
             Fire = 11,
             Lock = 12,
-            ScientistSentry = 13,
+            Sentry = 13,
             Other = 14,
             None = 15
         }
