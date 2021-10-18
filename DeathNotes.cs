@@ -378,19 +378,32 @@ namespace Oxide.Plugins
                 case CombatEntityType.Player:
                     return StripRichText(entity.ToPlayer().displayName);
 
-                case CombatEntityType.Helicopter:
-                    return "Helicopter";
-
                 case CombatEntityType.Scientist:
                 case CombatEntityType.Murderer:
                 case CombatEntityType.Scarecrow:
                     var name = entity.ToPlayer()?.displayName;
 
-                    return
-                        string.IsNullOrEmpty(name) || name == entity.ToPlayer()?.userID.ToString()
-                            ? combatEntityType.ToString()
-                            : name;
+                    if (!string.IsNullOrEmpty(name) && name != entity.ToPlayer()?.userID.ToString())
+                    {
+                        return name;   
+                    }
 
+                    if (!_enemyPrefabs.Contents.ContainsKey(entity.ShortPrefabName))
+                    {
+                        return combatEntityType.ToString();
+                    }
+                    
+                    break;
+
+                case CombatEntityType.TunnelDweller:
+                    return "Tunnel Dweller";
+                
+                case CombatEntityType.UnderwaterDweller:
+                    return "Underwater Dweller";
+                
+                case CombatEntityType.Helicopter:
+                    return "Helicopter";
+                
                 case CombatEntityType.Bradley:
                     return "Bradley APC";
 
@@ -415,6 +428,8 @@ namespace Oxide.Plugins
             Murderer = 3,
             Scientist = 4,
             Scarecrow = 16,
+            TunnelDweller = 17,
+            UnderwaterDweller = 18,
             Player = 5,
             Trap = 6,
             Turret = 7,
@@ -579,7 +594,7 @@ namespace Oxide.Plugins
 
                 return prefab;
             }
-
+            
             // Vehicles are the only thing we classify as a weapon, while not being classified as such by the game.
             // TODO: Having this here kinda sucks, make this better.
             if (deathData.DamageType == DamageType.Collision)
