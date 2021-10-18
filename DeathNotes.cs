@@ -266,7 +266,7 @@ namespace Oxide.Plugins
                 {
                     replacements.Add("hp", data.KillerEntity.Health().ToString("#0.#"));
                     replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
-                    replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo).ToArray()));
+                    replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo)));
                 }
                 else if (data.KillerEntityType == CombatEntityType.Turret
                     || data.KillerEntityType == CombatEntityType.Lock
@@ -581,14 +581,16 @@ namespace Oxide.Plugins
             return null;
         }
 
-        private List<string> GetCustomizedAttachmentNames(HitInfo info)
+        private string[] GetCustomizedAttachmentNames(HitInfo info)
         {
             var items = info?.Weapon?.GetItem()?.contents?.itemList;
 
             if (items == null)
-                return new List<string>();
+            {
+                return Array.Empty<string>();   
+            }
 
-            return items.Select(i => GetCustomizedAttachmentName(i.info.displayName.english)).ToList();
+            return items.Select(i => GetCustomizedAttachmentName(i.info.displayName.english)).ToArray();
         }
 
         private string GetCustomizedAttachmentName(string name)
