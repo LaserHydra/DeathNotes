@@ -1,4 +1,4 @@
-// #define DEBUG
+﻿// #define DEBUG
 
 using Newtonsoft.Json;
 using Oxide.Core;
@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.5")]
+    [Info("Death Notes", "LaserHydra", "6.3.6")]
     class DeathNotes : RustPlugin
     {
         #region Fields
@@ -866,7 +866,7 @@ namespace Oxide.Plugins
 
         internal sealed class RemoteConfiguration<T>
         {
-            private const string Host = "http://files.laserhydra.com/config/DeathNotes/";
+            private const string Host = "http://files.laserhydra.com/config/DeathNotes/v6.3.6/";
 
             private readonly string _file;
 
