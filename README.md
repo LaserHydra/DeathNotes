@@ -66,7 +66,7 @@ You can use the default configuration as an example on what it looks like when h
 - HeatSource
 - Fire
 - Lock
-- ScientistSentry
+- Sentry
 ```
 
 ### Available Damage Types
@@ -94,6 +94,7 @@ You can use the default configuration as an example on what it looks like when h
 - Decay
 - ElectricShock
 - Arrow
+- Collision
 ```
 
 ### Available Variable Placeholders

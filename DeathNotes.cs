@@ -265,7 +265,7 @@ namespace Oxide.Plugins
                 if (data.KillerEntityType == CombatEntityType.Player)
                 {
                     replacements.Add("hp", data.KillerEntity.Health().ToString("#0.#"));
-                    replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
+                    replacements.Add("weapon", GetCustomizedWeaponName(data));
                     replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo)));
                 }
                 else if (data.KillerEntityType == CombatEntityType.Turret
@@ -504,6 +504,15 @@ namespace Oxide.Plugins
                 data.KillerEntityType = CombatEntityType.Helicopter;
                 return;
             }
+            
+            // Vehicle Kills
+            if (data.KillerEntityType == CombatEntityType.Player
+                && data.DamageType == DamageType.Generic
+                && data.KillerEntity.ToPlayer().isMounted)
+            {
+                data.DamageType = DamageType.Collision;
+                return;
+            }
         }
 
         private struct AttackInfo
@@ -530,9 +539,9 @@ namespace Oxide.Plugins
 
         #region Weapons
 
-        private string GetCustomizedWeaponName(HitInfo hitInfo)
+        private string GetCustomizedWeaponName(DeathData deathData)
         {
-            var name = GetWeaponName(hitInfo);
+            var name = GetWeaponName(deathData);
 
             if (string.IsNullOrEmpty(name))
                 return null;
@@ -546,12 +555,12 @@ namespace Oxide.Plugins
             return _configuration.Translations.Weapons[name];
         }
 
-        private string GetWeaponName(HitInfo hitInfo)
+        private string GetWeaponName(DeathData deathData)
         {
-            if (hitInfo == null)
+            if (deathData.HitInfo == null)
                 return null;
 
-            Item item = hitInfo.Weapon?.GetItem();
+            Item item = deathData.HitInfo.Weapon?.GetItem();
             /*var parentEntity = hitInfo.Weapon?.GetParentEntity();
             Item item = null;
 
@@ -567,8 +576,8 @@ namespace Oxide.Plugins
             if (item != null)
                 return item.info.displayName.english;
 
-            var prefab = hitInfo.Initiator?.GetComponent<Flame>()?.SourceEntity?.ShortPrefabName ??
-                         hitInfo.WeaponPrefab?.ShortPrefabName;
+            var prefab = deathData.HitInfo.Initiator?.GetComponent<Flame>()?.SourceEntity?.ShortPrefabName ??
+                         deathData.HitInfo.WeaponPrefab?.ShortPrefabName;
 
             if (prefab != null)
             {
@@ -576,6 +585,13 @@ namespace Oxide.Plugins
                     return _weaponPrefabs.Contents[prefab];
 
                 return prefab;
+            }
+
+            // Vehicles are the only thing we classify as a weapon, while not being classified as such by the game.
+            // TODO: Having this here kinda sucks, make this better.
+            if (deathData.DamageType == DamageType.Collision)
+            {
+                return "Vehicle";
             }
 
             return null;
