@@ -473,22 +473,15 @@ namespace Oxide.Plugins
                 }
             }
 
-            if (data.KillerEntityType != CombatEntityType.None)
+            if (data.KillerEntityType != CombatEntityType.None && data.KillerEntity != null)
             {
-                try
+                // Workaround for deaths caused by flamethrower or rocket fire 
+                var flame = data.KillerEntity.gameObject.GetComponent<Flame>();
+                if (flame != null && flame.Initiator != null)
                 {
-                    // Workaround for deaths caused by flamethrower or rocket fire 
-                    var flame = data.KillerEntity?.gameObject?.GetComponent<Flame>();
-                    if (flame?.Initiator != null)
-                    {
-                        data.KillerEntity = flame.Initiator;
-                        data.KillerEntityType = CombatEntityType.Player;
-                        return;
-                    }
-                }
-                catch (Exception e)
-                {
-                    PrintError($"Exception while trying to access Flame component: {e}\n\nDeath Details: {JsonConvert.SerializeObject(data)}");
+                    data.KillerEntity = flame.Initiator;
+                    data.KillerEntityType = CombatEntityType.Player;
+                    return;
                 }
             }
 
