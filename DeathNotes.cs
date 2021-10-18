@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.5")]
+    [Info("Death Notes", "LaserHydra", "6.3.6")]
     class DeathNotes : RustPlugin
     {
         #region Fields
@@ -265,8 +265,8 @@ namespace Oxide.Plugins
                 if (data.KillerEntityType == CombatEntityType.Player)
                 {
                     replacements.Add("hp", data.KillerEntity.Health().ToString("#0.#"));
-                    replacements.Add("weapon", GetCustomizedWeaponName(data.HitInfo));
-                    replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo).ToArray()));
+                    replacements.Add("weapon", GetCustomizedWeaponName(data));
+                    replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo)));
                 }
                 else if (data.KillerEntityType == CombatEntityType.Turret
                     || data.KillerEntityType == CombatEntityType.Lock
@@ -378,24 +378,37 @@ namespace Oxide.Plugins
                 case CombatEntityType.Player:
                     return StripRichText(entity.ToPlayer().displayName);
 
-                case CombatEntityType.Helicopter:
-                    return "Helicopter";
-
                 case CombatEntityType.Scientist:
                 case CombatEntityType.Murderer:
                 case CombatEntityType.Scarecrow:
                     var name = entity.ToPlayer()?.displayName;
 
-                    return
-                        string.IsNullOrEmpty(name) || name == entity.ToPlayer()?.userID.ToString()
-                            ? combatEntityType.ToString()
-                            : name;
+                    if (!string.IsNullOrEmpty(name) && name != entity.ToPlayer()?.userID.ToString())
+                    {
+                        return name;   
+                    }
 
+                    if (!_enemyPrefabs.Contents.ContainsKey(entity.ShortPrefabName))
+                    {
+                        return combatEntityType.ToString();
+                    }
+                    
+                    break;
+
+                case CombatEntityType.TunnelDweller:
+                    return "Tunnel Dweller";
+                
+                case CombatEntityType.UnderwaterDweller:
+                    return "Underwater Dweller";
+                
+                case CombatEntityType.Helicopter:
+                    return "Helicopter";
+                
                 case CombatEntityType.Bradley:
                     return "Bradley APC";
 
-                case CombatEntityType.ScientistSentry:
-                    return "Scientist Sentry";
+                case CombatEntityType.Sentry:
+                    return "Sentry";
 
                 case CombatEntityType.Fire:
                     return entity.creatorEntity?.ToPlayer()?.displayName ?? "Fire";
@@ -415,6 +428,8 @@ namespace Oxide.Plugins
             Murderer = 3,
             Scientist = 4,
             Scarecrow = 16,
+            TunnelDweller = 17,
+            UnderwaterDweller = 18,
             Player = 5,
             Trap = 6,
             Turret = 7,
@@ -423,7 +438,7 @@ namespace Oxide.Plugins
             HeatSource = 10,
             Fire = 11,
             Lock = 12,
-            ScientistSentry = 13,
+            Sentry = 13,
             Other = 14,
             None = 15
         }
@@ -473,22 +488,15 @@ namespace Oxide.Plugins
                 }
             }
 
-            if (data.KillerEntityType != CombatEntityType.None)
+            if (data.KillerEntityType != CombatEntityType.None && data.KillerEntity != null)
             {
-                try
+                // Workaround for deaths caused by flamethrower or rocket fire 
+                var flame = data.KillerEntity.gameObject.GetComponent<Flame>();
+                if (flame != null && flame.Initiator != null)
                 {
-                    // Workaround for deaths caused by flamethrower or rocket fire 
-                    var flame = data.KillerEntity?.gameObject?.GetComponent<Flame>();
-                    if (flame?.Initiator != null)
-                    {
-                        data.KillerEntity = flame.Initiator;
-                        data.KillerEntityType = CombatEntityType.Player;
-                        return;
-                    }
-                }
-                catch (Exception e)
-                {
-                    PrintError($"Exception while trying to access Flame component: {e}\n\nDeath Details: {JsonConvert.SerializeObject(data)}");
+                    data.KillerEntity = flame.Initiator;
+                    data.KillerEntityType = CombatEntityType.Player;
+                    return;
                 }
             }
 
@@ -502,6 +510,15 @@ namespace Oxide.Plugins
             if (data.HitInfo?.WeaponPrefab?.ShortPrefabName?.StartsWith("rocket_heli") ?? false)
             {
                 data.KillerEntityType = CombatEntityType.Helicopter;
+                return;
+            }
+            
+            // Vehicle Kills
+            if (data.KillerEntityType == CombatEntityType.Player
+                && data.DamageType == DamageType.Generic
+                && data.KillerEntity.ToPlayer().isMounted)
+            {
+                data.DamageType = DamageType.Collision;
                 return;
             }
         }
@@ -530,9 +547,9 @@ namespace Oxide.Plugins
 
         #region Weapons
 
-        private string GetCustomizedWeaponName(HitInfo hitInfo)
+        private string GetCustomizedWeaponName(DeathData deathData)
         {
-            var name = GetWeaponName(hitInfo);
+            var name = GetWeaponName(deathData);
 
             if (string.IsNullOrEmpty(name))
                 return null;
@@ -546,12 +563,12 @@ namespace Oxide.Plugins
             return _configuration.Translations.Weapons[name];
         }
 
-        private string GetWeaponName(HitInfo hitInfo)
+        private string GetWeaponName(DeathData deathData)
         {
-            if (hitInfo == null)
+            if (deathData.HitInfo == null)
                 return null;
 
-            Item item = hitInfo.Weapon?.GetItem();
+            Item item = deathData.HitInfo.Weapon?.GetItem();
             /*var parentEntity = hitInfo.Weapon?.GetParentEntity();
             Item item = null;
 
@@ -567,8 +584,8 @@ namespace Oxide.Plugins
             if (item != null)
                 return item.info.displayName.english;
 
-            var prefab = hitInfo.Initiator?.GetComponent<Flame>()?.SourceEntity?.ShortPrefabName ??
-                         hitInfo.WeaponPrefab?.ShortPrefabName;
+            var prefab = deathData.HitInfo.Initiator?.GetComponent<Flame>()?.SourceEntity?.ShortPrefabName ??
+                         deathData.HitInfo.WeaponPrefab?.ShortPrefabName;
 
             if (prefab != null)
             {
@@ -577,18 +594,27 @@ namespace Oxide.Plugins
 
                 return prefab;
             }
+            
+            // Vehicles are the only thing we classify as a weapon, while not being classified as such by the game.
+            // TODO: Having this here kinda sucks, make this better.
+            if (deathData.DamageType == DamageType.Collision)
+            {
+                return "Vehicle";
+            }
 
             return null;
         }
 
-        private List<string> GetCustomizedAttachmentNames(HitInfo info)
+        private string[] GetCustomizedAttachmentNames(HitInfo info)
         {
             var items = info?.Weapon?.GetItem()?.contents?.itemList;
 
             if (items == null)
-                return new List<string>();
+            {
+                return Array.Empty<string>();   
+            }
 
-            return items.Select(i => GetCustomizedAttachmentName(i.info.displayName.english)).ToList();
+            return items.Select(i => GetCustomizedAttachmentName(i.info.displayName.english)).ToArray();
         }
 
         private string GetCustomizedAttachmentName(string name)
@@ -840,7 +866,7 @@ namespace Oxide.Plugins
 
         internal sealed class RemoteConfiguration<T>
         {
-            private const string Host = "http://files.laserhydra.com/config/DeathNotes/";
+            private const string Host = "http://files.laserhydra.com/config/DeathNotes/v6.3.6/";
 
             private readonly string _file;
 
