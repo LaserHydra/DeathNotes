@@ -16,7 +16,7 @@ namespace Oxide.Plugins
     using WeaponPrefabs = DeathNotes.RemoteConfiguration<Dictionary<string, string>>;
     using CombatEntityTypes = DeathNotes.RemoteConfiguration<Dictionary<string, DeathNotes.CombatEntityType>>;
 
-    [Info("Death Notes", "LaserHydra", "6.3.6")]
+    [Info("Death Notes", "LaserHydra", "6.3.7")]
     class DeathNotes : RustPlugin
     {
         #region Fields
@@ -34,6 +34,8 @@ namespace Oxide.Plugins
 
         private readonly Regex _colorTagRegex = new Regex(@"<color=.{0,7}>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private readonly Regex _sizeTagRegex = new Regex(@"<size=\d*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private readonly DeathData _death = new DeathData();
 
         private readonly List<string> _richTextLiterals = new List<string>
         {
@@ -125,49 +127,47 @@ namespace Oxide.Plugins
             if (victimEntity.gameObject == null)
                 return;
 
-            var data = new DeathData
-            {
-                VictimEntity = victimEntity,
-                KillerEntity = victimEntity.lastAttacker ?? hitInfo?.Initiator,
-                VictimEntityType = GetCombatEntityType(victimEntity),
-                KillerEntityType = GetCombatEntityType(victimEntity.lastAttacker),
-                DamageType = victimEntity.lastDamage,
-                HitInfo = hitInfo
-            };
-
+            _death.Reset();
+            _death.VictimEntity = victimEntity;
+            _death.KillerEntity = victimEntity.lastAttacker ?? hitInfo?.Initiator;
+            _death.VictimEntityType = GetCombatEntityType(victimEntity);
+            _death.KillerEntityType = GetCombatEntityType(victimEntity.lastAttacker);
+            _death.DamageType = victimEntity.lastDamage;
+            _death.HitInfo = hitInfo;
+            
             // Handle inconsistencies/exceptions
-            HandleInconsistencies(ref data);
+            HandleInconsistencies(_death);
 
 #if DEBUG
             LogDebug("[DEATHNOTES DEBUG]");
-            LogDebug($"VictimEntity: {data.VictimEntity?.GetType().Name ?? "NULL"} / {data.VictimEntity?.ShortPrefabName ?? "NULL"} / {data.VictimEntity?.PrefabName ?? "NULL"}");
-            LogDebug($"KillerEntity: {data.KillerEntity?.GetType().Name ?? "NULL"} / {data.KillerEntity?.ShortPrefabName ?? "NULL"} / {data.KillerEntity?.PrefabName ?? "NULL"}");
-            LogDebug($"VictimEntityType: {data.VictimEntityType}");
-            LogDebug($"KillerEntityType: {data.KillerEntityType}");
-            LogDebug($"DamageType: {data.DamageType}");
-            LogDebug($"Bodypart: {GetCustomizedBodypartName(data.HitInfo)}");
+            LogDebug($"VictimEntity: {_death.VictimEntity?.GetType().Name ?? "NULL"} / {_death.VictimEntity?.ShortPrefabName ?? "NULL"} / {_death.VictimEntity?.PrefabName ?? "NULL"}");
+            LogDebug($"KillerEntity: {_death.KillerEntity?.GetType().Name ?? "NULL"} / {_death.KillerEntity?.ShortPrefabName ?? "NULL"} / {_death.KillerEntity?.PrefabName ?? "NULL"}");
+            LogDebug($"VictimEntityType: {_death.VictimEntityType}");
+            LogDebug($"KillerEntityType: {_death.KillerEntityType}");
+            LogDebug($"DamageType: {_death.DamageType}");
+            LogDebug($"Bodypart: {GetCustomizedBodypartName(_death.HitInfo)}");
             LogDebug($"Weapon: {hitInfo?.WeaponPrefab?.ShortPrefabName ?? "NULL"}");
 #endif
 
             // Ignore deaths of other entities
-            if (data.KillerEntityType == CombatEntityType.Other || data.VictimEntityType == CombatEntityType.Other)
+            if (_death.KillerEntityType == CombatEntityType.Other || _death.VictimEntityType == CombatEntityType.Other)
                 return;
 
             // Ignore deaths which don't involve players or the helicopter which usually does not track a player as killer
-            if (data.VictimEntityType != CombatEntityType.Player && data.KillerEntityType != CombatEntityType.Player && data.VictimEntityType != CombatEntityType.Helicopter)
+            if (_death.VictimEntityType != CombatEntityType.Player && _death.KillerEntityType != CombatEntityType.Player && _death.VictimEntityType != CombatEntityType.Helicopter)
                 return;
 
             // Populate the variables in the message
             string message = PopulateMessageVariables(
                 // Find the best matching death message for this death
-                GetDeathMessage(data),
-                data
+                GetDeathMessage(_death),
+                _death
             );
 
             if (message == null)
                 return;
 
-            object hookResult = Interface.Call("OnDeathNotice", data.ToDictionary(), message);
+            object hookResult = Interface.Call("OnDeathNotice", _death.Data, message);
 
             if (hookResult?.Equals(false) ?? false)
                 return;
@@ -179,7 +179,7 @@ namespace Oxide.Plugins
                     if (_configuration.RequirePermission && !permission.UserHasPermission(player.UserIDString, CanSeePermission))
                         continue;
 
-                    if (_configuration.MessageRadius != -1 && player.Distance(data.VictimEntity) > _configuration.MessageRadius)
+                    if (_configuration.MessageRadius != -1 && player.Distance(_death.VictimEntity) > _configuration.MessageRadius)
                         continue;
 
                     Player.Reply(
@@ -246,45 +246,42 @@ namespace Oxide.Plugins
             if (string.IsNullOrEmpty(message))
                 return null;
 
-            var replacements = new Dictionary<string, string>
-            {
-                ["victim"] = GetCustomizedEntityName(data.VictimEntity, data.VictimEntityType)
-            };
+            data.Victim = GetCustomizedEntityName(data.VictimEntity, data.VictimEntityType);
 
             if (data.KillerEntityType != CombatEntityType.None)
             {
-                replacements.Add("killer", GetCustomizedEntityName(data.KillerEntity, data.KillerEntityType));
-                replacements.Add("bodypart", GetCustomizedBodypartName(data.HitInfo));
+                data.Killer = GetCustomizedEntityName(data.KillerEntity, data.KillerEntityType);
+                data.BodyPart = GetCustomizedBodypartName(data.HitInfo);
 
                 if (data.KillerEntity != null)
                 {
                     var distance = data.KillerEntity.Distance(data.VictimEntity);
-                    replacements.Add("distance", GetDistance(distance, _configuration.UseMetricDistance));
+                    data.Distance = GetDistance(distance, _configuration.UseMetricDistance);
                 }
 
                 if (data.KillerEntityType == CombatEntityType.Player)
                 {
-                    replacements.Add("hp", data.KillerEntity.Health().ToString("#0.#"));
-                    replacements.Add("weapon", GetCustomizedWeaponName(data));
-                    replacements.Add("attachments", string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo)));
+                    data.Hp = data.KillerEntity.Health().ToString("#0.#");
+                    data.Weapon = GetCustomizedWeaponName(data);
+                    data.Attachments = string.Join(", ", GetCustomizedAttachmentNames(data.HitInfo));
                 }
                 else if (data.KillerEntityType == CombatEntityType.Turret
                     || data.KillerEntityType == CombatEntityType.Lock
                     || data.KillerEntityType == CombatEntityType.Trap)
                 {
-                    replacements.Add("owner",
+                    data.Owner =
                         covalence.Players.FindPlayerById(data.KillerEntity.OwnerID.ToString())?.Name ?? "unknown owner"
-                    ); // TODO: Work on the potential unknown owner case
+                    ; // TODO: Work on the potential unknown owner case
                 }
             }
 
-            message = InsertPlaceholderValues(message, replacements);
-
-            replacements = null;
+            data.PopulateData();
+            message = InsertPlaceholderValues(message, data.Replacements);
+            
             return message;
         }
 
-        private struct DeathData
+        private class DeathData
         {
             public CombatEntityType VictimEntityType { get; set; }
             [JsonIgnore] public BaseCombatEntity VictimEntity { get; set; }
@@ -294,16 +291,76 @@ namespace Oxide.Plugins
 
             public DamageType DamageType { get; set; }
             [JsonIgnore] public HitInfo HitInfo { get; set; }
+            
+            public string Victim { get; set; }
+            public string Killer { get; set; }
+            public string BodyPart { get; set; }
+            public string Distance { get; set; }
+            public string Hp { get; set; }
+            public string Weapon { get; set; }
+            public string Attachments { get; set; }
+            public string Owner { get; set; }
 
-            public Dictionary<string, object> ToDictionary() => new Dictionary<string, object>
+            public readonly Dictionary<string, object> Data = new Dictionary<string, object>();
+            public readonly Dictionary<string, string> Replacements = new Dictionary<string, string>();
+
+            public void PopulateData()
             {
-                ["VictimEntityType"] = VictimEntityType,
-                ["VictimEntity"] = VictimEntity,
-                ["KillerEntityType"] = KillerEntityType,
-                ["KillerEntity"] = KillerEntity,
-                ["DamageType"] = DamageType,
-                ["HitInfo"] = HitInfo
-            };
+                EnsurePopulated();
+                Data["VictimEntityType"] = VictimEntityType;
+                Data["VictimEntity"] = VictimEntity;
+                Data["KillerEntityType"] = KillerEntityType;
+                Data["KillerEntity"] = KillerEntity;
+                Data["DamageType"] = DamageType;
+                Data["HitInfo"] = HitInfo;
+                
+                PopulateField("victim", Victim);
+                PopulateField("killer", Killer);
+                PopulateField("bodypart", BodyPart);
+                PopulateField("distance", Distance);
+                PopulateField("hp", Hp);
+                PopulateField("weapon", Weapon);
+                PopulateField("attachments", Attachments);
+                PopulateField("owner", Owner);
+            }
+
+            public void PopulateField(string key, string value)
+            {
+                Data[key] = value;
+                Replacements[key] = value;
+            }
+
+            public void EnsurePopulated()
+            {
+                Victim = Victim ?? string.Empty;
+                Killer = Killer ?? string.Empty;
+                BodyPart = BodyPart ?? string.Empty;
+                Distance = Distance ?? string.Empty;
+                Hp = Hp ?? string.Empty;
+                Weapon = Weapon ?? string.Empty;
+                Attachments = Attachments ?? string.Empty;
+                Owner = Owner ?? string.Empty;
+            }
+            
+            public void Reset()
+            {
+                Data.Clear();
+                Replacements.Clear();
+                VictimEntityType = default(CombatEntityType);
+                VictimEntity = null;
+                KillerEntityType = default(CombatEntityType);
+                KillerEntity = null;
+                DamageType = default(DamageType);
+                HitInfo = null;
+                Victim = null;
+                Killer = null;
+                BodyPart = null;
+                Distance = null;
+                Hp = null;
+                Weapon = null;
+                Attachments = null;
+                Owner = null;
+            }
         }
 
         #endregion
@@ -447,7 +504,7 @@ namespace Oxide.Plugins
 
         #region Workarounds and Inconsistency Handling
 
-        private void HandleInconsistencies(ref DeathData data)
+        private void HandleInconsistencies(DeathData data)
         {
             // Deaths of other entity types are not of interest and might cause errors
             if (data.VictimEntityType == CombatEntityType.Other)
